@@ -42,11 +42,23 @@ def ask(question: str, chunks: list[Chunk], client=None) -> tuple[Answer, object
     return response.parsed_output, response.usage
 
 
+def normalize_spaces(text: str) -> str:
+    """Collapses every run of spaces and newlines into one space, so line breaks do not fail a real quote."""
+    return " ".join(text.split())
+
+
 def verify_citations(answer: Answer, chunks: list[Chunk]) -> list[Citation]:
-    """TODO (step 5): return the citations that are NOT backed by the chunks.
+    """Return the citations that are NOT backed by the chunks.
 
     A citation is bad if its chunk_id is not one of the chunks we sent,
     or if its quote does not appear in that chunk's text.
     An empty list means every citation checks out.
     """
-    raise NotImplementedError("step 5: write verify_citations")
+    texts = {c.id: normalize_spaces(c.text) for c in chunks}
+    bad = []
+    for citation in answer.citations:
+        quote = normalize_spaces(citation.quote)
+        # An empty quote proves nothing, and an unknown chunk id finds no text to match.
+        if not quote or quote not in texts.get(citation.chunk_id, ""):
+            bad.append(citation)
+    return bad
